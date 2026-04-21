@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0a0a1a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CA Planner"/>
+<meta name="description" content="CA Intermediate Study Planner for January 2027"/>
+<title>CA Inter Planner</title>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifestData = {
+  name: "CA Inter Study Planner",
+  short_name: "CA Planner",
+  description: "CA Intermediate Study Planner for January 2027",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0a0a1a",
+  theme_color: "#8b5cf6",
+  orientation: "portrait-primary",
+  icons: [
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%238b5cf6'/><text y='130' x='30' font-size='120'>📚</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='64' fill='%238b5cf6'/><text y='360' x='60' font-size='320'>📚</text></svg>", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.write('<link rel="manifest" href="' + manifestURL + '">');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:linear-gradient(135deg,#0a0a1a 0%,#0f172a 40%,#0a0a1a 100%);
+  font-family:'Nunito','Segoe UI',sans-serif;
+  color:#e2e8f0;
+  overscroll-behavior:none;
+}
+#app{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.4);border-radius:2px;}
+input,select,button{font-family:inherit;-webkit-appearance:none;}
+input[type=range]{-webkit-appearance:slider-horizontal;accent-color:#8b5cf6;}
+input[type=color]{-webkit-appearance:none;border:none;padding:0;cursor:pointer;}
+input[type=date]{color-scheme:dark;}
+select{color-scheme:dark;}
+
+/* Header */
+#header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,10,26,0.92);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(139,92,246,0.25);
+  flex-shrink:0;
+}
+.header-top{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+.logo-area{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.logo-title{font-weight:900;font-size:15px;background:linear-gradient(90deg,#c4b5fd,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;}
+.logo-sub{font-size:10px;color:#64748b;margin-top:-2px;}
+.header-stats{display:flex;align-items:center;gap:12px;}
+.stat-pill{text-align:center;}
+.stat-pill .val{font-size:20px;font-weight:900;line-height:1;}
+.stat-pill .lbl{font-size:9px;color:#64748b;}
+.divider{width:1px;height:28px;background:rgba(255,255,255,0.1);}
+
+/* Tab Nav */
+.tab-nav{display:flex;padding:0 8px;overflow-x:auto;scrollbar-width:none;gap:2px;}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-btn{
+  padding:8px 14px;border:none;background:transparent;cursor:pointer;
+  font-weight:700;font-size:12px;color:#64748b;white-space:nowrap;
+  border-bottom:2px solid transparent;border-radius:6px 6px 0 0;
+  transition:all 0.2s;flex-shrink:0;
+}
+.tab-btn.active{color:#c4b5fd;border-bottom-color:#8b5cf6;background:rgba(139,92,246,0.15);}
+
+/* Content */
+#content{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;}
+
+/* Cards */
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;margin-bottom:14px;}
+.card-title{font-weight:800;font-size:14px;color:#c4b5fd;margin-bottom:12px;}
+
+/* Stat Grid */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
+.stat-card .icon{position:absolute;top:8px;right:10px;font-size:22px;opacity:0.15;}
+.stat-card .slbl{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;}
+.stat-card .sval{font-size:28px;font-weight:900;line-height:1.1;margin-top:4px;}
+.stat-card .ssub{font-size:11px;color:#475569;margin-top:2px;}
+
+/* Progress bars */
+.prog-bar-wrap{margin-bottom:12px;}
+.prog-bar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.prog-bar-name{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px;}
+.prog-bar-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.prog-bar-pct{font-size:12px;color:#94a3b8;}
+.prog-bar-track{height:7px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;}
+.prog-bar-fill{height:100%;border-radius:99px;transition:width 1s cubic-bezier(0.34,1.56,0.64,1);}
+
+/* Buttons */
+.btn{padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:13px;color:#e2e8f0;transition:all 0.15s;font-family:inherit;}
+.btn-primary{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,0.06);}
+.btn-danger{background:rgba(239,68,68,0.12);color:#ef4444;}
+.btn:active{transform:scale(0.97);}
+
+/* Input */
+.inp{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 13px;color:#e2e8f0;font-size:14px;font-family:inherit;}
+.inp:focus{border-color:rgba(139,92,246,0.5);outline:none;}
+.field-lbl{display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.05em;}
+.field{margin-bottom:12px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* Subject Card */
+.subject-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;margin-bottom:12px;transition:border 0.2s;}
+.sc-header{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;}
+.sc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.sc-info{flex:1;min-width:0;}
+.sc-name{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-sub{font-size:11px;color:#64748b;margin-top:1px;}
+.sc-pct{font-size:26px;font-weight:900;flex-shrink:0;}
+.sc-bar{height:5px;background:rgba(255,255,255,0.05);margin:0 14px 10px;}
+.sc-bar-fill{height:100%;transition:width 1s ease;}
+.sc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.04);margin:0 14px 12px;border-radius:8px;overflow:hidden;}
+.sc-stat{background:#0f172a;padding:8px 4px;text-align:center;}
+.sc-stat .v{font-size:12px;font-weight:800;}
+.sc-stat .l{font-size:9px;color:#64748b;margin-top:1px;}
+.sc-actions{display:flex;gap:8px;padding:0 14px 14px;align-items:center;}
+.sc-slider-wrap{display:flex;align-items:center;gap:8px;padding:0 14px 8px;}
+.badge{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:700;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.modal-box{background:#13131f;border:1px solid rgba(139,92,246,0.3);border-radius:20px 20px 0 0;padding:20px 20px 32px;width:100%;max-height:90vh;overflow-y:auto;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-title{font-weight:900;font-size:18px;color:#c4b5fd;margin-bottom:18px;}
+.modal-handle{width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 16px;}
+
+/* Toast */
+#toast{position:fixed;top:80px;right:16px;z-index:300;padding:12px 18px;border-radius:12px;font-weight:700;font-size:13px;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.4);transition:opacity 0.3s;display:none;}
+
+/* Charts */
+.chart-wrap{position:relative;height:170px;margin-top:4px;}
+
+/* Heatmap */
+.heatmap{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px;}
+.hm-col{display:flex;flex-direction:column;gap:3px;}
+.hm-cell{width:12px;height:12px;border-radius:2px;flex-shrink:0;}
+.hm-labels{display:flex;gap:3px;margin-bottom:2px;padding-left:16px;}
+
+/* Insights */
+.readiness-wrap{display:flex;gap:14px;align-items:center;margin-bottom:0;}
+.readiness-circle{position:relative;width:90px;height:90px;flex-shrink:0;}
+.readiness-circle svg{transform:rotate(-90deg);width:90px;height:90px;}
+.readiness-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.readiness-pct{font-size:20px;font-weight:900;}
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.scenario-card{border-radius:10px;padding:12px;}
+.tip-card{display:flex;gap:12px;border-radius:10px;padding:12px;margin-bottom:8px;}
+.tip-icon{font-size:22px;flex-shrink:0;}
+
+/* Edit Panel */
+.edit-panel{border-top:1px solid rgba(255,255,255,0.07);padding:14px;background:rgba(0,0,0,0.2);}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.35s ease;}
+
+/* Weekly bars manual */
+.week-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:8px;}
+.week-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.week-bar-fill{width:100%;border-radius:5px 5px 0 0;min-height:4px;transition:height 0.5s ease;}
+.week-bar-lbl{font-size:10px;color:#64748b;}
+
+/* Bottom padding for mobile */
+.bottom-pad{height:20px;}
+
+/* Install banner */
+#install-banner{display:none;background:linear-gradient(135deg,rgba(139,92,246,0.2),rgba(245,158,11,0.1));border:1px solid rgba(139,92,246,0.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;align-items:center;gap:10px;}
+#install-banner.show{display:flex;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="header-top">
+      <div class="logo-area">
+        <div class="logo-icon">📚</div>
+        <div>
+          <div class="logo-title">CA Inter Planner</div>
+          <div class="logo-sub">January 2027 Exam</div>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat-pill">
+          <div class="val" id="h-days" style="color:#10b981">—</div>
+          <div class="lbl">days left</div>
+        </div>
+        <div class="divider"></div>
+        <div class="stat-pill">
+          <div class="val" id="h-pct" style="color:#c4b5fd">0%</div>
+          <div class="lbl">complete</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-nav" id="tab-nav"></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div id="toast"></div>
+<div id="modal-root"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'ca_inter_pwa_v2';
+const EXAM_DATE = new Date('2027-01-01');
+const TABS = ['Dashboard','Subjects','Progress','Insights'];
+
+let state = {
+  subjects: [
+    {id:1,name:'Advanced Accounting',color:'#f59e0b',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Core Subjects'},
+    {id:2,name:'Corporate & Other Laws',color:'#10b981',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Core Subjects'},
+    {id:3,name:'Taxation',color:'#3b82f6',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Core Subjects'},
+    {id:4,name:'Cost & Management Accounting',color:'#ec4899',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Applied Subjects'},
+    {id:5,name:'Auditing & Assurance',color:'#8b5cf6',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Applied Subjects'},
+    {id:6,name:'Financial Management',color:'#ef4444',totalLectures:0,totalHours:0,completedLectures:0,deadline:'',dailyTarget:2,group:'Applied Subjects'},
+  ],
+  studyLogs: [],
+  activeTab: 'Dashboard',
+  editingId: null,
+  selectedGroup: 'All',
+};
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; });
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const d = JSON.parse(raw); state.subjects = d.subjects || state.subjects; state.studyLogs = d.studyLogs || []; }
+  } catch {}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({subjects: state.subjects, studyLogs: state.studyLogs})); } catch {}
+}
+load();
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function daysUntil(ds) { if(!ds) return null; return Math.ceil((new Date(ds) - new Date()) / 86400000); }
+function daysToExam() { return Math.ceil((EXAM_DATE - new Date()) / 86400000); }
+function fmtH(h) { if(!h) return '0h'; return h>=1 ? Math.round(h*10)/10+'h' : Math.round(h*60)+'m'; }
+function totalLectures() { return state.subjects.reduce((a,s)=>a+s.totalLectures,0); }
+function totalCompleted() { return state.subjects.reduce((a,s)=>a+s.completedLectures,0); }
+function overallPct() { const t=totalLectures(); return t ? Math.round(totalCompleted()/t*100) : 0; }
+function totalHours() { return state.subjects.reduce((a,s)=>a+s.totalHours,0); }
+function completedHours() { return state.subjects.reduce((a,s)=>{ const r=s.totalLectures?s.completedLectures/s.totalLectures:0; return a+r*s.totalHours; },0); }
+function dateStr(offset=0) { const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().split('T')[0]; }
+function dayLabel(ds) { return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(ds).getDay()]; }
+function calcStreak() {
+  const s = new Set(state.studyLogs.map(l=>l.date));
+  let streak=0, d=new Date();
+  while(true){ const ds=d.toISOString().split('T')[0]; if(!s.has(ds)) break; streak++; d.setDate(d.getDate()-1); }
+  return streak;
+}
+function avgLecPerDay() {
+  const days = new Set(state.studyLogs.map(l=>l.date)).size;
+  if(!days) return 0;
+  return state.studyLogs.reduce((a,l)=>a+l.lectures,0)/days;
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='success'?'linear-gradient(135deg,#10b981,#059669)':type==='info'?'linear-gradient(135deg,#6366f1,#4f46e5)':'#ef4444';
+  t.style.display = 'block'; t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',300); }, 2800);
+}
+
+function updateHeader() {
+  const dte = daysToExam();
+  const el = document.getElementById('h-days');
+  if(el){ el.textContent=dte; el.style.color=dte<90?'#ef4444':dte<180?'#f59e0b':'#10b981'; }
+  const pe = document.getElementById('h-pct');
+  if(pe) pe.textContent = overallPct()+'%';
+}
+
+// ── CHARTS REGISTRY ─────────────────────────────────────────────────────────
+const charts = {};
+function destroyChart(id) { if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function makeChart(id, config) {
+  destroyChart(id);
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  charts[id] = new Chart(canvas, config);
+}
+
+// ── RENDER ENGINE ─────────────────────────────────────────────────────────────
+function render() {
+  save();
+  updateHeader();
+  renderTabs();
+  renderContent();
+}
+
+function renderTabs() {
+  const nav = document.getElementById('tab-nav');
+  nav.innerHTML = TABS.map(t=>`<button class="tab-btn${state.activeTab===t?' active':''}" onclick="switchTab('${t}')">${t}</button>`).join('');
+}
+
+function switchTab(tab) { state.activeTab=tab; render(); }
+
+function renderContent() {
+  const el = document.getElementById('content');
+  Object.values(charts).forEach(c=>c.destroy());
+  Object.keys(charts).forEach(k=>delete charts[k]);
+  el.className = 'fade-in';
+  el.style.animation='none'; requestAnimationFrame(()=>el.style.animation='');
+
+  if(state.activeTab==='Dashboard') el.innerHTML = dashboardHTML();
+  else if(state.activeTab==='Subjects') el.innerHTML = subjectsHTML();
+  else if(state.activeTab==='Progress') el.innerHTML = progressHTML();
+  else if(state.activeTab==='Insights') el.innerHTML = insightsHTML();
+
+  el.innerHTML += '<div class="bottom-pad"></div>';
+  attachEvents();
+
+  requestAnimationFrame(()=>{
+    if(state.activeTab==='Dashboard') initDashCharts();
+    else if(state.activeTab==='Progress') initProgressCharts();
+  });
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function dashboardHTML() {
+  const dte = daysToExam();
+  const pct = overallPct();
+  const tc = totalCompleted(); const tl = totalLectures();
+  const ch = completedHours(); const th = totalHours();
+
+  const stats = [
+    {lbl:'Overall Progress',val:pct+'%',sub:`${tc}/${tl} lectures`,color:'#8b5cf6',icon:'🎯'},
+    {lbl:'Hours Completed',val:fmtH(ch),sub:`of ${fmtH(th)} total`,color:'#f59e0b',icon:'⏱️'},
+    {lbl:'Days to Exam',val:dte,sub:'January 2027',color:dte<90?'#ef4444':'#10b981',icon:'📅'},
+    {lbl:'Subjects',val:state.subjects.length,sub:`${state.subjects.filter(s=>s.completedLectures===s.totalLectures&&s.totalLectures>0).length} done`,color:'#3b82f6',icon:'📖'},
+  ];
+
+  const installBanner = `<div id="install-banner"><span style="font-size:22px">📲</span><div style="flex:1"><div style="font-weight:800;font-size:13px;color:#c4b5fd">Add to Home Screen</div><div style="font-size:11px;color:#64748b;margin-top:2px">Use offline like a real app!</div></div><button class="btn btn-primary" style="padding:8px 12px;font-size:12px" onclick="installApp()">Install</button></div>`;
+
+  return `
+  ${installBanner}
+  <div class="stat-grid">
+    ${stats.map(s=>`<div class="stat-card"><div class="icon">${s.icon}</div><div class="slbl">${s.lbl}</div><div class="sval" style="color:${s.color}">${s.val}</div><div class="ssub">${s.sub}</div></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 This Week</div>
+    <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📚 Subject Progress</div>
+    ${state.subjects.map(s=>{
+      const p=s.totalLectures?Math.round(s.completedLectures/s.totalLectures*100):0;
+      const dl=daysUntil(s.deadline);
+      return `<div class="prog-bar-wrap">
+        <div class="prog-bar-head">
+          <div class="prog-bar-name"><div class="prog-bar-dot" style="background:${s.color}"></div>${s.name}${dl!==null&&dl<=7?`<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444">⚠️${dl}d</span>`:''}</div>
+          <span class="prog-bar-pct">${s.completedLectures}/${s.totalLectures} · ${p}%</span>
+        </div>
+        <div class="prog-bar-track"><div class="prog-bar-fill" style="width:${p}%;background:linear-gradient(90deg,${s.color}99,${s.color})"></div></div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(245,158,11,0.05));border-color:rgba(139,92,246,0.25)">
+    <div class="card-title">⚡ Quick Study Log</div>
+    <div class="field">
+      <label class="field-lbl">Subject</label>
+      <select class="inp" id="ql-sub">
+        ${state.subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="field-lbl">Lectures</label><input type="number" class="inp" id="ql-lec" value="1" min="1"/></div>
+      <div class="field"><label class="field-lbl">Hours</label><input type="number" class="inp" id="ql-hrs" value="1" min="0" step="0.5"/></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="quickLog()">Log Study Session ✓</button>
+    <div id="ql-remaining" style="font-size:11px;color:#64748b;margin-top:8px;text-align:center"></div>
+  </div>`;
+}
+
+function initDashCharts() {
+  // Check install
+  if(deferredInstallPrompt) { const b=document.getElementById('install-banner'); if(b) b.classList.add('show'); }
+
+  // Update ql remaining
+  const subEl = document.getElementById('ql-sub');
+  function updateRemaining() {
+    const id = +subEl?.value;
+    const s = state.subjects.find(x=>x.id===id);
+    const r = document.getElementById('ql-remaining');
+    if(s&&r) r.textContent = `${s.totalLectures-s.completedLectures} lectures remaining in ${s.name}`;
+  }
+  if(subEl) { subEl.addEventListener('change', updateRemaining); updateRemaining(); }
+
+  // Week chart
+  const week = [];
+  for(let i=6;i>=0;i--) {
+    const ds = dateStr(-i);
+    const logs = state.studyLogs.filter(l=>l.date===ds);
+    week.push({label:dayLabel(ds), lectures:logs.reduce((a,l)=>a+l.lectures,0)});
+  }
+  makeChart('weekChart', {
+    type:'bar',
+    data:{
+      labels:week.map(w=>w.label),
+      datasets:[{data:week.map(w=>w.lectures), backgroundColor:week.map((_,i)=>i===6?'#8b5cf6':'rgba(139,92,246,0.3)'), borderRadius:6, borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw} lectures`}}},scales:{x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}},y:{display:false,grid:{display:false}}}}
+  });
+}
+
+function quickLog() {
+  const id = +document.getElementById('ql-sub').value;
+  const lec = +document.getElementById('ql-lec').value || 1;
+  const hrs = +document.getElementById('ql-hrs').value || 0;
+  logStudy(id, lec, hrs);
+}
+
+// ── SUBJECTS ──────────────────────────────────────────────────────────────────
+function subjectsHTML() {
+  const groups = ['All', ...new Set(state.subjects.map(s=>s.group).filter(Boolean))];
+  const filtered = state.selectedGroup==='All' ? state.subjects : state.subjects.filter(s=>s.group===state.selectedGroup);
+  
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-weight:900;font-size:18px;color:#c4b5fd">Manage Subjects</div>
+    <button class="btn btn-primary" onclick="showAddModal()">+ Add</button>
+  </div>
+
+  <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">
+    ${groups.map(g=>`<button class="btn" style="white-space:nowrap;flex-shrink:0;${state.selectedGroup===g?'background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff':'background:rgba(255,255,255,0.06)'}" onclick="state.selectedGroup='${g}';render()">${g}</button>`).join('')}
+  </div>
+
+  ${filtered.length===0?'<div style="text-align:center;padding:50px 20px;color:#475569"><div style="font-size:40px;margin-bottom:10px">📚</div><div style="font-weight:700">No subjects in this group</div></div>':''}
+  ${filtered.map(s=>subjectCardHTML(s)).join('')}`;
+}
+
+function subjectCardHTML(s) {
+  const p = s.totalLectures?Math.round(s.completedLectures/s.totalLectures*100):0;
+  const rem = s.totalLectures - s.completedLectures;
+  const perLec = s.totalLectures ? s.totalHours/s.totalLectures : 0;
+  const remHrs = rem * perLec;
+  const dl = daysUntil(s.deadline);
+  const isEditing = state.editingId === s.id;
+  const dlBadge = dl!==null ? `<span class="badge" style="background:${dl<0||dl<=7?'rgba(239,68,68,0.15)':dl<=14?'rgba(245,158,11,0.15)':'rgba(16,185,129,0.15)'};color:${dl<0||dl<=7?'#ef4444':dl<=14?'#f59e0b':'#10b981'}">${dl<0?Math.abs(dl)+'d overdue':dl+'d left'}</span>` : '';
+
+  const editPanel = isEditing ? `
+  <div class="edit-panel">
+    <div class="grid2">
+      <div class="field"><label class="field-lbl">Name</label><input type="text" class="inp" id="e-name-${s.id}" value="${s.name}"/></div>
+      <div class="field"><label class="field-lbl">Color</label><input type="color" class="inp" id="e-color-${s.id}" value="${s.color}" style="height:42px;padding:2px 4px;cursor:pointer"/></div>
+      <div class="field"><label class="field-lbl">Total Lectures</label><input type="number" class="inp" id="e-tl-${s.id}" value="${s.totalLectures}" min="0"/></div>
+      <div class="field"><label class="field-lbl">Total Hours</label><input type="number" class="inp" id="e-th-${s.id}" value="${s.totalHours}" min="0" step="0.5"/></div>
+      <div class="field"><label class="field-lbl">Completed Lec.</label><input type="number" class="inp" id="e-cl-${s.id}" value="${s.completedLectures}" min="0"/></div>
+      <div class="field"><label class="field-lbl">Daily Target</label><input type="number" class="inp" id="e-dt-${s.id}" value="${s.dailyTarget}" min="1"/></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="field-lbl">Group</label><input type="text" class="inp" id="e-grp-${s.id}" value="${s.group||''}"/></div>
+      <div class="field"><label class="field-lbl">Deadline</label><input type="date" class="inp" id="e-dl-${s.id}" value="${s.deadline}"/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="state.editingId=null;render()">Cancel</button>
+      <button class="btn" style="flex:2;background:${s.color};color:#fff" onclick="saveEdit(${s.id})">Save ✓</button>
+    </div>
+  </div>` : '';
+
+  return `
+  <div class="subject-card" id="sc-${s.id}" style="border-color:${isEditing?s.color+'55':'rgba(255,255,255,0.08)'}">
+    <div class="sc-header">
+      <div class="sc-icon" style="background:${s.color}22">📖</div>
+      <div class="sc-info">
+        <div class="sc-name">${s.name} ${dlBadge}</div>
+        <div class="sc-sub">${s.group} • ${s.completedLectures}/${s.totalLectures} lec · ${fmtH(s.totalHours)} total</div>
+      </div>
+      <div class="sc-pct" style="color:${s.color}">${p}%</div>
+    </div>
+    <div class="sc-bar"><div class="sc-bar-fill" style="width:${p}%;background:linear-gradient(90deg,${s.color}88,${s.color})"></div></div>
+    <div class="sc-stats">
+      <div class="sc-stat"><div class="v">${rem}</div><div class="l">Remaining</div></div>
+      <div class="sc-stat"><div class="v">${fmtH(remHrs)}</div><div class="l">Hrs Left</div></div>
+      <div class="sc-stat"><div class="v">${fmtH(perLec)}</div><div class="l">Per Lec</div></div>
+      <div class="sc-stat"><div class="v">${s.dailyTarget}/d</div><div class="l">Target</div></div>
+    </div>
+    ${!isEditing?`
+    <div class="sc-slider-wrap">
+      <span style="font-size:11px;color:#64748b;white-space:nowrap">Done:</span>
+      <input type="range" style="flex:1" min="0" max="${s.totalLectures||100}" value="${s.completedLectures}" oninput="quickSlider(${s.id},this.value)"/>
+      <span style="font-size:13px;font-weight:800;color:${s.color};min-width:28px;text-align:right">${s.completedLectures}</span>
+    </div>
+    <div class="sc-actions">
+      <input type="number" class="inp" id="ll-${s.id}" value="1" min="1" style="width:64px;padding:8px 10px;font-size:13px"/>
+      <input type="number" class="inp" id="lh-${s.id}" value="1" min="0" step="0.5" style="width:64px;padding:8px 10px;font-size:13px"/>
+      <button class="btn" style="flex:1;background:${s.color};color:#fff;padding:9px 10px;font-size:12px" onclick="logFromCard(${s.id})">Log ✓</button>
+      <button class="btn btn-ghost" style="padding:9px 10px;font-size:12px" onclick="startEdit(${s.id})">✏️</button>
+      <button class="btn btn-danger" style="padding:9px 10px;font-size:12px" onclick="deleteSubject(${s.id})">✕</button>
+    </div>`:''}
+    ${editPanel}
+  </div>`;
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────────────
+function progressHTML() {
+  const totalStudied = state.studyLogs.reduce((a,l)=>a+l.lectures,0);
+  const totalStudyHrs = state.studyLogs.reduce((a,l)=>a+l.hours,0);
+  const activeDays = new Set(state.studyLogs.map(l=>l.date)).size;
+  const streak = calcStreak();
+
+  const heatmap = buildHeatmap();
+
+  return `
+  <div class="stat-grid">
+    ${[
+      {lbl:'Lectures Logged',val:totalStudied,color:'#8b5cf6',icon:'🎓'},
+      {lbl:'Hours Studied',val:fmtH(totalStudyHrs),color:'#f59e0b',icon:'⏰'},
+      {lbl:'Active Days',val:activeDays,color:'#10b981',icon:'📅'},
+      {lbl:'Streak',val:streak+'d',color:'#ef4444',icon:'🔥'},
+    ].map(s=>`<div class="stat-card" style="text-align:center"><div style="font-size:24px">${s.icon}</div><div class="sval" style="color:${s.color}">${s.val}</div><div class="slbl" style="margin-top:4px">${s.lbl}</div></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 30-Day Activity</div>
+    <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📚 Subject Completion</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="barChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗓️ Study Heatmap</div>
+    ${heatmap}
+    <div style="display:flex;align-items:center;gap:5px;margin-top:10px">
+      <span style="font-size:10px;color:#475569">Less</span>
+      ${[0.06,0.25,0.5,0.75,1].map(o=>`<div style="width:12px;height:12px;border-radius:2px;background:${o===0.06?'rgba(255,255,255,0.06)':`rgba(139,92,246,${o})`}"></div>`).join('')}
+      <span style="font-size:10px;color:#475569">More</span>
+    </div>
+  </div>`;
+}
+
+function buildHeatmap() {
+  const logMap = {};
+  state.studyLogs.forEach(l=>{ logMap[l.date]=(logMap[l.date]||0)+l.lectures; });
+  const maxCount = Math.max(...Object.values(logMap),1);
+  const today = new Date();
+  const start = new Date(today); start.setDate(start.getDate()-77);
+  start.setDate(start.getDate()-start.getDay());
+
+  let cols = '';
+  for(let w=0;w<11;w++){
+    let cells='';
+    for(let d=0;d<7;d++){
+      const date=new Date(start); date.setDate(start.getDate()+w*7+d);
+      const ds=date.toISOString().split('T')[0];
+      const cnt=logMap[ds]||0;
+      const future=date>today;
+      const intensity=future?0:cnt/maxCount;
+      const bg=future?'rgba(255,255,255,0.03)':cnt===0?'rgba(255,255,255,0.06)':`rgba(139,92,246,${0.2+intensity*0.8})`;
+      cells+=`<div class="hm-cell" style="background:${bg}" title="${ds}: ${cnt} lec"></div>`;
+    }
+    cols+=`<div class="hm-col">${cells}</div>`;
+  }
+  return `<div class="heatmap">${cols}</div>`;
+}
+
+function initProgressCharts() {
+  // 30-day line
+  const days30=[];
+  for(let i=29;i>=0;i--){
+    const ds=dateStr(-i);
+    const logs=state.studyLogs.filter(l=>l.date===ds);
+    days30.push({label:i%7===0?ds.slice(5):'',lec:logs.reduce((a,l)=>a+l.lectures,0),hrs:logs.reduce((a,l)=>a+l.hours,0)});
+  }
+  makeChart('lineChart',{
+    type:'line',
+    data:{labels:days30.map(d=>d.label),datasets:[
+      {label:'Lectures',data:days30.map(d=>d.lec),borderColor:'#8b5cf6',borderWidth:2.5,fill:true,backgroundColor:'rgba(139,92,246,0.1)',tension:0.4,pointRadius:0},
+      {label:'Hours',data:days30.map(d=>d.hrs),borderColor:'#f59e0b',borderWidth:2,fill:false,borderDash:[5,3],tension:0.4,pointRadius:0},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b',font:{size:10}}}}}
+  });
+
+  // Subject bar
+  const sbData = state.subjects.map(s=>({name:s.name.split(' ').slice(0,2).join(' '),comp:s.completedLectures,rem:Math.max(0,s.totalLectures-s.completedLectures),color:s.color}));
+  makeChart('barChart',{
+    type:'bar',
+    data:{labels:sbData.map(s=>s.name),datasets:[
+      {label:'Completed',data:sbData.map(s=>s.comp),backgroundColor:sbData.map(s=>s.color),borderRadius:0},
+      {label:'Remaining',data:sbData.map(s=>s.rem),backgroundColor:'rgba(255,255,255,0.07)',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b',font:{size:10}}},y:{stacked:true,grid:{display:false},ticks:{color:'#94a3b8',font:{size:11}}}}}
+  });
+}
+
+// ── INSIGHTS ──────────────────────────────────────────────────────────────────
+function insightsHTML() {
+  const dte=daysToExam();
+  const totalRem=state.subjects.reduce((a,s)=>a+Math.max(0,s.totalLectures-s.completedLectures),0);
+  const totalRemHrs=state.subjects.reduce((a,s)=>{ const r=Math.max(0,s.totalLectures-s.completedLectures); const p=s.totalLectures?s.totalHours/s.totalLectures:0; return a+r*p; },0);
+  const avg=avgLecPerDay();
+  const examReadiness=()=>{ if(!totalRem) return 100; const dn=avg>0?totalRem/avg:Infinity; return Math.min(100,Math.round(dte/dn*100)); };
+  const er=examReadiness();
+  const rc=er>=75?'#10b981':er>=40?'#f59e0b':'#ef4444';
+  const rl=er>=75?'On Track! 🎉':er>=40?'Needs Attention ⚠️':'Critical! 🚨';
+  const circ=2*Math.PI*35;
+
+  const scenarios=[
+    {label:'🐢 Slow',lec:2,color:'#ef4444'},
+    {label:'🚶 Moderate',lec:4,color:'#f59e0b'},
+    {label:'🏃 Fast',lec:6,color:'#10b981'},
+    {label:'⚡ Intense',lec:8,color:'#3b82f6'},
+  ];
+
+  const tips=buildTips(state.subjects,dte,avg,totalRem);
+
+  return `
+  <div class="card" style="background:linear-gradient(135deg,${rc}11,rgba(0,0,0,0));border-color:${rc}44">
+    <div class="readiness-wrap">
+      <div class="readiness-circle">
+        <svg viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="35" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+          <circle cx="40" cy="40" r="35" fill="none" stroke="${rc}" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-er/100)}" style="transition:stroke-dashoffset 1.5s ease"/>
+        </svg>
+        <div class="readiness-inner"><div class="readiness-pct" style="color:${rc}">${er}%</div></div>
+      </div>
+      <div>
+        <div style="font-size:18px;font-weight:900;color:${rc}">${rl}</div>
+        <div style="color:#94a3b8;font-size:12px;margin-top:5px;line-height:1.5">${er>=75?'Great pace! You can finish before Jan 2027.':er>=40?'Pick up the pace. Increase daily lectures.':'Behind schedule. Major increase needed.'}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:6px">Pace: ~${avg.toFixed(1)} lec/day · ${totalRem} remaining · ${dte} days left</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚀 Speed Scenarios</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px">${totalRem} lectures remaining to cover</div>
+    <div class="scenario-grid">
+      ${scenarios.map(sc=>{
+        const days=Math.ceil(totalRem/sc.lec);
+        const fits=days<=dte;
+        const hpd=sc.lec*(totalRem>0&&totalRemHrs>0?totalRemHrs/totalRem:0);
+        return `<div class="scenario-card" style="background:${sc.color}11;border:1px solid ${sc.color}33">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><div style="font-weight:800;font-size:14px">${sc.label}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">${sc.lec} lec/day</div></div>
+            <div style="text-align:right"><div style="font-size:24px;font-weight:900;color:${sc.color};line-height:1">${days}</div><div style="font-size:10px;color:#64748b">days</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:8px">
+            <div style="width:7px;height:7px;border-radius:50%;background:${fits?'#10b981':'#ef4444'}"></div>
+            <span style="font-size:11px;color:${fits?'#10b981':'#ef4444'};font-weight:700">${fits?`${dte-days}d before exam`:`${days-dte}d over date`}</span>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:3px">≈ ${fmtH(hpd)}/day</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔍 Per-Subject Analysis</div>
+    ${state.subjects.map(s=>{
+      const rem=Math.max(0,s.totalLectures-s.completedLectures);
+      const dl=daysUntil(s.deadline);
+      const needed=dl&&dl>0?Math.ceil(rem/dl):null;
+      const perLec=s.totalLectures?s.totalHours/s.totalLectures:0;
+      const estDays=avg>0?Math.ceil(rem/avg):null;
+      return `<div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:center;margin-bottom:8px">
+        <div style="width:3px;align-self:stretch;background:${s.color};border-radius:2px;flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13px">${s.name}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:3px">${rem} lec left · ${fmtH(rem*perLec)} est.${estDays!==null?` · ~${estDays}d at cur. pace`:''}</div>
+        </div>
+        ${needed!==null?`<div style="text-align:center;background:${needed>(s.dailyTarget||3)?'rgba(239,68,68,0.1)':'rgba(16,185,129,0.1)'};border-radius:7px;padding:5px 10px;flex-shrink:0"><div style="font-size:16px;font-weight:900;color:${needed>(s.dailyTarget||3)?'#ef4444':'#10b981'}">${needed}</div><div style="font-size:9px;color:#64748b">lec/day</div></div>`:''}
+        ${!s.deadline&&rem>0?`<div style="font-size:11px;color:#64748b;font-style:italic">No deadline</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">💡 Smart Tips</div>
+    ${tips.map(t=>`<div class="tip-card" style="background:${t.color}0d;border:1px solid ${t.color}22">
+      <div class="tip-icon">${t.icon}</div>
+      <div><div style="font-weight:800;font-size:13px;color:${t.color}">${t.title}</div><div style="font-size:12px;color:#94a3b8;margin-top:3px;line-height:1.5">${t.text}</div></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function buildTips(subjects,dte,avg,totalRem) {
+  const tips=[];
+  const overdue=subjects.filter(s=>s.deadline&&daysUntil(s.deadline)<0&&s.completedLectures<s.totalLectures);
+  if(overdue.length) tips.push({icon:'🚨',color:'#ef4444',title:'Overdue Subjects',text:`${overdue.map(s=>s.name).join(', ')} past deadline. Prioritize immediately!`});
+  const urgent=subjects.filter(s=>s.deadline&&daysUntil(s.deadline)<=7&&daysUntil(s.deadline)>=0&&s.completedLectures<s.totalLectures);
+  if(urgent.length) tips.push({icon:'⚠️',color:'#f59e0b',title:'Urgent Deadlines',text:`${urgent.map(s=>s.name).join(', ')} in ≤7 days. Focus today!`});
+  if(dte<200&&totalRem>0) { const n=Math.ceil(totalRem/dte); tips.push({icon:'📊',color:'#3b82f6',title:'Minimum Daily Target',text:`Need at least ${n} lectures/day to finish by January 2027.`}); }
+  if(avg>0&&avg<3) tips.push({icon:'💪',color:'#8b5cf6',title:'Increase Your Pace',text:`${avg.toFixed(1)} lec/day is low. Target 4–6 lec/day for comfortable prep.`});
+  const noDeadline=subjects.filter(s=>!s.deadline&&s.totalLectures>0);
+  if(noDeadline.length) tips.push({icon:'📅',color:'#10b981',title:'Set Subject Deadlines',text:`${noDeadline.length} subjects have no deadline. Set them to avoid last-minute cramming.`});
+  tips.push({icon:'🧠',color:'#6366f1',title:'Revision Window',text:'Reserve Oct–Dec 2026 for revision and mock tests. Aim to finish first run by September 2026.'});
+  tips.push({icon:'📝',color:'#f59e0b',title:'CA Exam Tip',text:'Focus 70%+ on ICAI Study Material & Practice Manual. Solve past exam papers — they are your best predictor.'});
+  return tips;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function logStudy(id, lectures, hours) {
+  const s = state.subjects.find(x=>x.id===id);
+  if(!s) return;
+  const newComp = Math.min(s.completedLectures+lectures, s.totalLectures||9999);
+  state.subjects = state.subjects.map(x=>x.id===id?{...x,completedLectures:newComp}:x);
+  state.studyLogs.push({subjectId:id,date:dateStr(0),lectures,hours});
+  showToast(`+${lectures} lectures logged for ${s.name}!`);
+  render();
+}
+
+function logFromCard(id) {
+  const lec = +document.getElementById(`ll-${id}`).value||1;
+  const hrs = +document.getElementById(`lh-${id}`).value||0;
+  logStudy(id, lec, hrs);
+}
+
+function quickSlider(id, val) {
+  state.subjects = state.subjects.map(s=>s.id===id?{...s,completedLectures:+val}:s);
+  save(); updateHeader();
+  // update just pct text and bar without full re-render
+  const card=document.getElementById(`sc-${id}`);
+  if(!card) return;
+  const s=state.subjects.find(x=>x.id===id);
+  const p=s.totalLectures?Math.round(s.completedLectures/s.totalLectures*100):0;
+  const pctEl=card.querySelector('.sc-pct'); if(pctEl) pctEl.textContent=p+'%';
+  const fill=card.querySelector('.sc-bar-fill'); if(fill) fill.style.width=p+'%';
+}
+
+function startEdit(id) { state.editingId=id; render(); }
+
+function saveEdit(id) {
+  const name=document.getElementById(`e-name-${id}`).value.trim();
+  const color=document.getElementById(`e-color-${id}`).value;
+  const tl=+document.getElementById(`e-tl-${id}`).value;
+  const th=+document.getElementById(`e-th-${id}`).value;
+  const cl=Math.min(+document.getElementById(`e-cl-${id}`).value,tl);
+  const dt=+document.getElementById(`e-dt-${id}`).value||1;
+  const grp=document.getElementById(`e-grp-${id}`).value.trim();
+  const dl=document.getElementById(`e-dl-${id}`).value;
+  state.subjects=state.subjects.map(s=>s.id===id?{...s,name,color,totalLectures:tl,totalHours:th,completedLectures:cl,dailyTarget:dt,deadline:dl,group:grp}:s);
+  state.editingId=null;
+  showToast('Changes saved!');
+  render();
+}
+
+function deleteSubject(id) {
+  const s=state.subjects.find(x=>x.id===id);
+  if(!confirm(`Delete "${s.name}"?`)) return;
+  state.subjects=state.subjects.filter(x=>x.id!==id);
+  showToast(`"${s.name}" removed`,'info');
+  render();
+}
+
+// ── ADD SUBJECT MODAL ────────────────────────────────────────────────────────
+function showAddModal() {
+  const existingGroups = [...new Set(state.subjects.map(s=>s.group).filter(Boolean))];
+  const modal=document.getElementById('modal-root');
+  modal.innerHTML=`
+  <div class="modal-overlay" id="mo" onclick="closeModal(event)">
+    <div class="modal-box">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add New Subject</div>
+      <div class="field"><label class="field-lbl">Subject Name</label><input type="text" class="inp" id="m-name" placeholder="e.g. Strategic Financial Management" autofocus/></div>
+      <div class="grid2">
+        <div class="field"><label class="field-lbl">Total Lectures</label><input type="number" class="inp" id="m-tl" value="0" min="0"/></div>
+        <div class="field"><label class="field-lbl">Total Hours</label><input type="number" class="inp" id="m-th" value="0" min="0" step="0.5"/></div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Group</label>
+        <select class="inp" id="m-group">
+          <option value="">Select or create group</option>
+          ${existingGroups.map(g=>`<option value="${g}">${g}</option>`).join('')}
+          <option value="new">+ Create New Group</option>
+        </select>
+      </div>
+      <div id="m-group-input" style="display:none" class="field"><label class="field-lbl">New Group Name</label><input type="text" class="inp" id="m-new-group" placeholder="e.g. Electives"/></div>
+      <div class="grid2">
+        <div class="field"><label class="field-lbl">Deadline</label><input type="date" class="inp" id="m-dl"/></div>
+        <div class="field"><label class="field-lbl">Color</label><input type="color" class="inp" id="m-color" value="#6366f1" style="height:42px;padding:2px 4px"/></div>
+      </div>
+      <div class="field"><label class="field-lbl">Daily Target (lectures)</label><input type="number" class="inp" id="m-dt" value="2" min="1"/></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:2" onclick="addSubject()">Add Subject</button>
+      </div>
+    </div>
+  </div>`;
+  
+  document.getElementById('m-group').addEventListener('change', e=>{
+    document.getElementById('m-group-input').style.display = e.target.value==='new'?'block':'none';
+  });
+}
+
+function closeModal(e) {
+  if(!e||e.target.id==='mo') document.getElementById('modal-root').innerHTML='';
+}
+
+function addSubject() {
+  const name=document.getElementById('m-name').value.trim();
+  if(!name) { showToast('Please enter a subject name'); return; }
+  
+  let group = document.getElementById('m-group').value;
+  if(group==='new') {
+    group = document.getElementById('m-new-group').value.trim();
+    if(!group) { showToast('Please enter a group name'); return; }
+  }
+  if(!group) { showToast('Please select or create a group'); return; }
+  
+  const s={
+    id:Date.now(),name,
+    color:document.getElementById('m-color').value,
+    totalLectures:+document.getElementById('m-tl').value||0,
+    totalHours:+document.getElementById('m-th').value||0,
+    completedLectures:0,
+    deadline:document.getElementById('m-dl').value,
+    dailyTarget:+document.getElementById('m-dt').value||2,
+    group,
+  };
+  state.subjects.push(s);
+  state.selectedGroup = group;
+  closeModal();
+  showToast(`"${s.name}" added to ${group}!`);
+  state.activeTab='Subjects';
+  render();
+}
+
+// ── INSTALL ───────────────────────────────────────────────────────────────────
+async function installApp() {
+  if(!deferredInstallPrompt) { showToast('Use browser menu → Add to Home Screen','info'); return; }
+  deferredInstallPrompt.prompt();
+  const {outcome}=await deferredInstallPrompt.userChoice;
+  if(outcome==='accepted') showToast('App installed! 🎉');
+  deferredInstallPrompt=null;
+}
+
+// ── EVENT ATTACHMENT ─────────────────────────────────────────────────────────
+function attachEvents() {
+  // Events attached via inline onclick handlers in HTML
+}
+
+// ── SERVICE WORKER ───────────────────────────────────────────────────────────
+if('serviceWorker' in navigator) {
+  const swCode=`
+const CACHE='ca-planner-v2';
+const ASSETS=[self.location.href];
+self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))); self.skipWaiting(); });
+self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); self.clients.claim(); });
+self.addEventListener('fetch',e=>{ e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{ if(res.ok){ const clone=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,clone)); } return res; }))); });`;
+  const swBlob=new Blob([swCode],{type:'application/javascript'});
+  const swURL=URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL).catch(()=>{});
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
